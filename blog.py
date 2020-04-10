@@ -18,6 +18,7 @@ def login_required(f):
 
     return decorated_function
 
+
 # Kullanıcı kayıt formu class
 class RegisterForm(Form):
     name = StringField("Name Surname", validators=[validators.length(min=4, max=50), validators.DataRequired()])
@@ -28,14 +29,17 @@ class RegisterForm(Form):
         validators.EqualTo(fieldname="confirm", message="Password isn't match")
     ])
     confirm = PasswordField("Confirm Password")
-    
+
+
 class SignIn(Form):
     username = StringField("User Name")
     password = PasswordField("Password")
 
+
 class ArticleForm(Form):
     title = StringField("Article Subject", validators=[validators.Length(min=5, max=100)])
     content = TextAreaField("Article Content", validators=[validators.length(min=10)])
+
 
 app = Flask(__name__)
 app.config["MYSQL_HOST"] = "localhost"
@@ -47,6 +51,7 @@ app.config["MYSQL_CURSORCLASS"] = "DictCursor"
 app.secret_key = "ybbblog"
 
 mysql = MySQL(app)
+
 
 @app.route("/")
 def index():
@@ -60,21 +65,24 @@ def index():
     # return render_template("index.html", process = 4, numbers = numbers, records = records)
     return render_template("index.html")
 
+
 @app.route("/about")
 def about():
     return render_template("about.html")
 
+
 @app.route("/article/<string:id>")
-def article(id):
+def article(getid):
 
     cursor = mysql.connection.cursor()
     query = "SELECT * FROM ARTICLES WHERE ID = %s"
-    result = cursor.execute(query, (id,))
+    result = cursor.execute(query, (getid,))
     if result > 0:
-        article = cursor.fetchone()
-        return render_template("article.html", article = article)
+        articledetail = cursor.fetchone()
+        return render_template("article.html", article=articledetail)
     else:
         return render_template("article.html")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -96,10 +104,11 @@ def register():
 
         return redirect(url_for("signin"))
     else:
-        return render_template("register.html", form = form)
+        return render_template("register.html", form=form)
+
 
 # Login processs
-@app.route("/signin", methods = ["GET", "POST"])
+@app.route("/signin", methods=["GET", "POST"])
 def signin():
     form = SignIn(request.form)
 
@@ -126,13 +135,15 @@ def signin():
             flash("No records found", "danger")
             return redirect(url_for("signin"))
     else:
-        return render_template("signin.html", form = form)
+        return render_template("signin.html", form=form)
+
 
 @app.route("/signout")
 def signout():
     session.clear()
     return redirect(url_for("index"))
-    
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -140,13 +151,14 @@ def dashboard():
     cursor = mysql.connection.cursor()
 
     query = "SELECT * FROM ARTICLES WHERE AUTHOR = %s"
-    result = cursor.execute(query,(session["username"],))
+    result = cursor.execute(query, (session["username"],))
 
     if result > 0:
-        articles = cursor.fetchall()
-        return render_template("dashboard.html", articles = articles)
+        articlesdetail = cursor.fetchall()
+        return render_template("dashboard.html", articles=articlesdetail)
     else:
         return render_template("dashboard.html")
+
 
 @app.route("/articles")
 def articles():
@@ -157,12 +169,13 @@ def articles():
     if result > 0:
         articles = cursor.fetchall()
 
-        return render_template("articles.html", articles = articles)
+        return render_template("articles.html", articles=articles)
     else:
         return render_template("articles.html")
 
+
 # Add article
-@app.route("/addarticle", methods = ["GET", "POST"])
+@app.route("/addarticle", methods=["GET", "POST"])
 def addarticle():
     form = ArticleForm(request.form)
 
@@ -181,63 +194,66 @@ def addarticle():
 
         return redirect(url_for("dashboard"))
     else:
-        return render_template("addarticle.html", form = form)
+        return render_template("addarticle.html", form=form)
+
 
 @app.route("/delete/<string:id>")
 @login_required
-def delete(id):
+def delete(getid):
     cursor = mysql.connection.cursor()
 
     query = "SELECT *  FROM ARTICLES WHERE AUTHOR = %s AND ID = %s"
 
-    result = cursor.execute(query, (session["username"], id))
+    result = cursor.execute(query, (session["username"], getid))
 
     if result > 0:
         querydelete = "DELETE FROM ARTICLES WHERE ID = %s"
-        cursor.execute(querydelete, (id,))
+        cursor.execute(querydelete, (getid,))
         mysql.connection.commit()
 
         return redirect(url_for("dashboard"))
     else:
-        flash("There isn't a article or you don't have authorized","danger")
+        flash("There isn't a article or you don't have authorized", "danger")
         return redirect(url_for("index"))
 
-@app.route("/update/<string:id>", methods = ["GET", "POST"])
+
+@app.route("/update/<string:id>", methods=["GET", "POST"])
 @login_required
-def update(id):
+def update(getid):
     
     if request.method == "GET":
         cursor = mysql.connection.cursor()
 
-        query = "SELECT * FROM ARTICLES WHERE ID = %s AND AUTHOR = %s"
-        result = cursor.execute(query, (id, session["username"]))
+        query = "SELECT * FROM ARsTICLES WHERE ID = %s AND AUTHOR = %s"
+        result = cursor.execute(query, (getid, session["username"]))
 
         if result == 0:
             flash("There isn't a article like this or you don't have an authorized","danger")
             return redirect(url_for("index"))
         else:
-            article = cursor.fetchone()
+            articledetail = cursor.fetchone()
             form = ArticleForm()
 
-            form.title.data = article["title"]
-            form.content.data = article["content"]
-            return render_template("update.html", form = form)
+            form.title.data = articledetail["title"]
+            form.content.data = articledetail["content"]
+            return render_template("update.html", form=form)
     else:
 
         form = ArticleForm(request.form)
-        newTitle = form.title.data
-        newContent = form.content.data
+        newtitle = form.title.data
+        newcontent = form.content.data
 
         query2 = "UPDATE ARTICLES SET TITLE = %s, CONTENT = %s WHERE ID = %s"
 
         cursor = mysql.connection.cursor()
-        cursor.execute(query2, (newTitle, newContent, id))
+        cursor.execute(query2, (newtitle, newcontent, id))
         mysql.connection.commit()
         flash("Article updated successfully","success")
         return redirect(url_for("dashboard"))
 
+
 # Searching
-@app.route("/search", methods = ["GET", "POST"])
+@app.route("/search", methods=["GET", "POST"])
 def search():
     if request.method == "GET":
         return redirect(url_for("index"))
@@ -253,8 +269,8 @@ def search():
             flash("No articles matching the searched word were found", "warning")
             return redirect(url_for("articles"))
         else:
-            articles = cursor.fetchall()
-            return render_template("articles.html", articles = articles)
+            articlesdetail = cursor.fetchall()
+            return render_template("articles.html", articles=articlesdetail)
 
 
 if __name__ == "__main__":
