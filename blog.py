@@ -9,7 +9,6 @@ from functools import wraps
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # if session["logged_in"]:
         if "logged_in" in session:
             return f(*args, **kwargs)
         else:
@@ -19,7 +18,7 @@ def login_required(f):
     return decorated_function
 
 
-# Kullanıcı kayıt formu class
+# User registration form class
 class RegisterForm(Form):
     name = StringField("Name Surname", validators=[validators.length(min=4, max=50), validators.DataRequired()])
     email = StringField("Email", validators=[validators.Email(message="Please, input valid email address")])
@@ -55,14 +54,6 @@ mysql = MySQL(app)
 
 @app.route("/")
 def index():
-    # numbers = range(1, 10)
-    # records = [
-    #     {"id":1, "title":"TestTitle 1", "content":"TestContent 1"},
-    #     {"id":2, "title":"TestTitle 2", "content":"TestContent 2"},
-    #     {"id":3, "title":"TestTitle 3", "content":"TestContent 3"},
-    #     {"id":4, "title":"TestTitle 4", "content":"TestContent 4"},
-    # ]
-    # return render_template("index.html", process = 4, numbers = numbers, records = records)
     return render_template("index.html")
 
 
@@ -74,14 +65,15 @@ def about():
 @app.route("/article/<string:id>")
 def article(getid):
 
+    url = "article.html"
     cursor = mysql.connection.cursor()
     query = "SELECT * FROM ARTICLES WHERE ID = %s"
     result = cursor.execute(query, (getid,))
     if result > 0:
         articledetail = cursor.fetchone()
-        return render_template("article.html", article=articledetail)
+        return render_template(url, article=articledetail)
     else:
-        return render_template("article.html")
+        return render_template(url)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -148,6 +140,7 @@ def signout():
 @login_required
 def dashboard():
 
+    url = "dashboard.html"
     cursor = mysql.connection.cursor()
 
     query = "SELECT * FROM ARTICLES WHERE AUTHOR = %s"
@@ -155,23 +148,25 @@ def dashboard():
 
     if result > 0:
         articlesdetail = cursor.fetchall()
-        return render_template("dashboard.html", articles=articlesdetail)
+        return render_template(url, articles=articlesdetail)
     else:
-        return render_template("dashboard.html")
+        return render_template(url)
 
 
 @app.route("/articles")
 def articles():
 
+    url = "articles.html"
+    
     cursor = mysql.connection.cursor()
     query = "SELECT * FROM ARTICLES"
     result = cursor.execute(query)
     if result > 0:
         articles = cursor.fetchall()
 
-        return render_template("articles.html", articles=articles)
+        return render_template(url, articles=articles)
     else:
-        return render_template("articles.html")
+        return render_template(url)
 
 
 # Add article
@@ -224,7 +219,7 @@ def update(getid):
     if request.method == "GET":
         cursor = mysql.connection.cursor()
 
-        query = "SELECT * FROM ARsTICLES WHERE ID = %s AND AUTHOR = %s"
+        query = "SELECT * FROM ARTICLES WHERE ID = %s AND AUTHOR = %s"
         result = cursor.execute(query, (getid, session["username"]))
 
         if result == 0:
@@ -262,7 +257,6 @@ def search():
 
         cursor = mysql.connection.cursor()
         query = "SELECT * FROM ARTICLES WHERE TITLE LIKE '%" + keyword + "%'"
-        # query = "SELECT * FROM WHERE TITLE LIKE '%ticle%'"
         result = cursor.execute(query)
 
         if result == 0:
